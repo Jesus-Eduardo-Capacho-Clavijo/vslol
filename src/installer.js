@@ -62,11 +62,12 @@ export function handleInstallerAndSingleInstance() {
   // Manejar desinstalación
   if (args.includes('--uninstall')) {
     try {
+      execSync(`taskkill /F /FI "PID ne ${process.pid}" /IM VSlol.exe`, { stdio: 'ignore', windowsHide: true });
+    } catch {}
+    try {
       execSync('reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "VSlol" /f', { stdio: 'ignore', windowsHide: true });
-    } catch {
-      // Ignorar si no existía la clave
-    }
-    showMessageBox('VSlol ha sido desinstalado del inicio automático de Windows.');
+    } catch {}
+    showMessageBox('VSlol ha sido detenido y desinstalado del inicio automático de Windows.');
     process.exit(0);
   }
 

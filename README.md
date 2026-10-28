@@ -17,11 +17,13 @@ No requiere instalar Node.js ni librerías adicionales.
 
 ### Desinstalación
 
-Para detener y quitar el programa del sistema:
-- Abre una terminal y ejecuta `VSlol.exe --uninstall`, o
-- Ve a `%LOCALAPPDATA%\VSlol` y ejecuta `Desinstalar VSlol.bat` (creado automáticamente en la instalación).
+Para desinstalar y quitar el programa, abre el Símbolo del sistema (CMD) o PowerShell y ejecuta:
 
-Esto cierra el proceso activo, elimina la clave del registro de inicio de Windows y borra los archivos instalados.
+```cmd
+"%LOCALAPPDATA%\VSlol\VSlol.exe" --uninstall
+```
+
+Esto detiene el proceso en segundo plano, lo elimina del inicio automático de Windows y muestra un aviso de confirmación.
 
 ---
 
