@@ -10,8 +10,12 @@ const loopbackLcuAgent = new https.Agent({
   keepAlive: false,
 });
 
-// Ruta estándar fija del lockfile de League of Legends (sin escanear otras carpetas ni procesos)
-const STANDARD_LOCKFILE_PATH = 'C:\\Riot Games\\League of Legends\\lockfile';
+// Rutas estándar fijas del lockfile de League of Legends en unidades de disco frecuentes (sin escanear procesos)
+const CANDIDATE_LOCKFILE_PATHS = [
+  'C:\\Riot Games\\League of Legends\\lockfile',
+  'D:\\Riot Games\\League of Legends\\lockfile',
+  'E:\\Riot Games\\League of Legends\\lockfile',
+];
 
 export class RiotLcu {
   constructor() {
@@ -20,41 +24,59 @@ export class RiotLcu {
     this.protocol = 'https';
     this.isConnected = false;
     this.summoner = null;
+    this.skinCache = new Map();
+  }
+
+  /**
+   * Destrucción inmediata y volátil de credenciales y datos de sesión en memoria
+   */
+  clearCredentials() {
+    this.port = null;
+    this.token = null;
+    this.protocol = 'https';
+    this.isConnected = false;
+    this.summoner = null;
+    if (this.skinCache) {
+      this.skinCache.clear();
+    }
   }
 
   /**
    * REQUISITO DE SEGURIDAD B:
    * CERO escaneo de procesos del sistema. Cero llamadas a tasklist, GetProcesses o Win32_Process.
-   * Solo lee el archivo lockfile en la ruta oficial estándar si existe.
+   * Solo lee el archivo lockfile en rutas oficiales estándar si existe.
    */
   detectCredentials() {
     try {
-      if (fs.existsSync(STANDARD_LOCKFILE_PATH)) {
-        const content = fs.readFileSync(STANDARD_LOCKFILE_PATH, 'utf-8');
-        const parts = content.split(':');
-        // Formato: ProcessName:PID:Port:Password:Protocol
-        if (parts.length >= 5) {
-          const newPort = parts[2];
-          const newToken = parts[3];
-          const newProtocol = parts[4] || 'https';
-          if (newPort !== this.port || newToken !== this.token) {
-            this.port = newPort;
-            this.token = newToken;
-            this.protocol = newProtocol;
-            this.summoner = null;
-            if (this.skinCache) this.skinCache.clear();
+      for (const lockfilePath of CANDIDATE_LOCKFILE_PATHS) {
+        if (fs.existsSync(lockfilePath)) {
+          const content = fs.readFileSync(lockfilePath, 'utf-8');
+          const parts = content.split(':');
+          // Formato: ProcessName:PID:Port:Password:Protocol
+          if (parts.length >= 5) {
+            const newPort = parts[2];
+            const newToken = parts[3];
+            const newProtocol = parts[4] || 'https';
+            if (newPort !== this.port || newToken !== this.token) {
+              this.port = newPort;
+              this.token = newToken;
+              this.protocol = newProtocol;
+              this.summoner = null;
+              if (this.skinCache) this.skinCache.clear();
+            }
+            this.isConnected = true;
+            return true;
           }
-          this.isConnected = true;
-          return true;
         }
       }
-    } catch {
-      // Ignorar si el juego no está abierto o el archivo está bloqueado
+    } catch (err) {
+      // Ignorar exclusivamente errores esperados de I/O (bloqueo transitorio por escritura de Riot Client)
+      if (err.code !== 'EBUSY' && err.code !== 'EPERM' && err.code !== 'ENOENT') {
+        console.error('[RiotLcu] Error inesperado al leer lockfile:', err);
+      }
     }
 
-    this.port = null;
-    this.token = null;
-    this.isConnected = false;
+    this.clearCredentials();
     return false;
   }
 
@@ -81,11 +103,9 @@ export class RiotLcu {
         (res) => {
           if (res.statusCode !== 200) {
             res.resume();
-            // Si el token expiró por cambio de cuenta (401/403), invalidar para releer lockfile
+            // Si el token expiró por cambio de cuenta (401/403), invalidar inmediatamente
             if (res.statusCode === 401 || res.statusCode === 403) {
-              this.port = null;
-              this.token = null;
-              this.isConnected = false;
+              this.clearCredentials();
             }
             return resolve(null);
           }
@@ -95,29 +115,37 @@ export class RiotLcu {
           res.on('end', () => {
             try {
               resolve(JSON.parse(body));
-            } catch {
-              resolve(null);
+            } catch (err) {
+              if (err instanceof SyntaxError) {
+                resolve(null);
+              } else {
+                console.error('[RiotLcu] Error inesperado parseando respuesta:', err);
+                resolve(null);
+              }
             }
           });
         }
       );
 
-      req.on('error', () => {
-        // Si el socket falla (ej. cliente reiniciado en otro puerto), invalidar credenciales
-        this.port = null;
-        this.token = null;
-        this.isConnected = false;
+      req.on('error', (err) => {
+        // Si el socket falla (ej. cliente cerrado o reiniciado en otro puerto), destruir credenciales
+        if (err.code !== 'ECONNREFUSED' && err.code !== 'ECONNRESET') {
+          console.debug?.('[RiotLcu] Socket error:', err.code || err.message);
+        }
+        this.clearCredentials();
         resolve(null);
       });
 
       req.on('timeout', () => {
         req.destroy();
+        this.clearCredentials();
         resolve(null);
       });
     });
   }
 
   async getGameflowPhase() {
+    this.detectCredentials();
     return await this.request('/lol-gameflow/v1/gameflow-phase');
   }
 
@@ -150,12 +178,50 @@ export class RiotLcu {
           }
           this.skinCache.set(championId, map);
         }
-      } catch {
-        // fallback
+      } catch (err) {
+        console.warn(`[RiotLcu] Error obteniendo skins para campeón ${championId}:`, err?.message || err);
       }
     }
     const champMap = this.skinCache.get(championId);
     return champMap?.get(skinNum) || defaultChampName;
+  }
+
+  async getGameflowSession() {
+    return await this.request('/lol-gameflow/v1/session');
+  }
+
+  async getLobby() {
+    return await this.request('/lol-lobby/v2/lobby');
+  }
+
+  async getCurrentGameModeInfo() {
+    try {
+      // 1. Prioridad: Sesión activa de partida / champ select / matchmaking / lobby
+      const session = await this.getGameflowSession();
+      if (session?.gameData) {
+        const qId = session.gameData.queue?.id;
+        const isCustom = Boolean(session.gameData.isCustom);
+        const mode = session.gameData.queue?.gameMode || session.gameData.gameMode;
+        if (qId !== undefined || mode) {
+          return { queueId: qId, gameMode: mode, isCustom };
+        }
+      }
+    } catch {}
+
+    try {
+      // 2. Si no hay sesión o sólo está en sala (Lobby)
+      const lobby = await this.getLobby();
+      if (lobby?.gameConfig) {
+        const qId = lobby.gameConfig.queueId;
+        const isCustom = Boolean(lobby.gameConfig.isCustom);
+        const mode = lobby.gameConfig.gameMode;
+        if (qId !== undefined || mode) {
+          return { queueId: qId, gameMode: mode, isCustom };
+        }
+      }
+    } catch {}
+
+    return null;
   }
 }
 

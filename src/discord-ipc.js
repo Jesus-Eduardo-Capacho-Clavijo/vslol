@@ -150,7 +150,7 @@ export class DiscordIPC extends EventEmitter {
       payload.copy(packet, 8);
       this.socket.write(packet, (err) => {
         if (err) {
-          // Socket write error manejado de forma segura
+          console.warn('[DiscordIPC] Error al escribir en socket IPC:', err.message);
         }
       });
     } catch (err) {

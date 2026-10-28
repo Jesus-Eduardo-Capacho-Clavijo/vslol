@@ -32,16 +32,108 @@ export function formatRankedTier(rankedData) {
   const rawTier = (target.tier || '').toUpperCase();
   const tierName = TIER_NAMES_ES[rawTier] || (rawTier.charAt(0) + rawTier.slice(1).toLowerCase());
   const division = target.division && target.division !== 'NA' ? ` ${target.division}` : '';
-  const lp = typeof target.leaguePoints === 'number' && target.leaguePoints > 0 ? ` (${target.leaguePoints} LP)` : '';
+  const lp = typeof target.leaguePoints === 'number' && target.leaguePoints >= 0 ? ` ${target.leaguePoints} LP` : '';
 
   if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(rawTier)) {
-    return `${tierName}${lp}`;
+    return `${tierName}${lp}`.trim();
   }
 
-  return `${tierName}${division}${lp}`;
+  return `${tierName}${division}${lp}`.trim();
 }
 
-export function buildInGamePresence(liveData, config, rankText = '', skinName = '') {
+export const QUEUE_NAMES = {
+  // Clasificatorias
+  420: 'Ranked SoloQ',
+  440: 'Ranked Flex 5v5',
+
+  // Normales
+  400: 'Normal Reclutamiento',
+  430: 'Normal Oculta',
+  490: 'Partida Rápida',
+
+  // Modos especiales y rotativos
+  450: 'ARAM',
+  2400: 'ARAM Caos',
+  1700: 'Arena',
+  1710: 'Arena',
+  900: 'ARURF',
+  1900: 'URF',
+  1020: 'Uno para Todos',
+  1300: 'Nexus Blitz',
+  1400: 'Libro de Hechizos',
+  1810: 'Enjambre',
+  1820: 'Enjambre',
+  1830: 'Enjambre',
+  1840: 'Enjambre',
+  2300: 'Pelea',
+
+  // Personalizada y Práctica
+  0: 'Personalizada',
+
+  // Bots y Tutorial
+  830: 'Co-op vs IA',
+  840: 'Co-op vs IA',
+  850: 'Co-op vs IA',
+  870: 'Co-op vs IA',
+  880: 'Co-op vs IA',
+  890: 'Co-op vs IA',
+  2000: 'Tutorial',
+  2010: 'Tutorial',
+  2020: 'Tutorial',
+};
+
+export const RAW_MODE_NAMES = {
+  'CLASSIC': 'Grieta del Invocador',
+  'ARAM': 'ARAM',
+  'CHERRY': 'Arena',
+  'PRACTICETOOL': 'Herramienta de Práctica',
+  'URF': 'URF',
+  'ARURF': 'ARURF',
+  'ONEFORALL': 'Uno para Todos',
+  'NEXUSBLITZ': 'Nexus Blitz',
+  'ULTBOOK': 'Libro de Hechizos',
+  'SWIFTPLAY': 'Partida Rápida',
+  'STRAWBERRY': 'Enjambre',
+  'TUTORIAL': 'Tutorial',
+  'MAYHEM': 'ARAM Caos',
+  'ARAM_MAYHEM': 'ARAM Caos',
+};
+
+export function resolveGameModeName(queueId, rawGameMode, isCustom = false) {
+  const cleanRaw = (rawGameMode || '').toUpperCase().trim();
+
+  // 1. Herramienta de práctica
+  if (cleanRaw === 'PRACTICETOOL' || cleanRaw.includes('PRACTICE')) {
+    return 'Herramienta de Práctica';
+  }
+
+  // 2. ARAM Caos (Queue 2400 o mención en el modo)
+  if (queueId === 2400 || cleanRaw.includes('MAYHEM') || cleanRaw.includes('CAOS')) {
+    return 'ARAM Caos';
+  }
+
+  // 3. Modos conocidos por queueId
+  if (typeof queueId === 'number' && QUEUE_NAMES[queueId]) {
+    if (queueId === 0) {
+      return isCustom && cleanRaw === 'PRACTICETOOL' ? 'Herramienta de Práctica' : 'Personalizada';
+    }
+    return QUEUE_NAMES[queueId];
+  }
+
+  // 4. Personalizada por flag
+  if (isCustom) {
+    return cleanRaw === 'PRACTICETOOL' ? 'Herramienta de Práctica' : 'Personalizada';
+  }
+
+  // 5. Mapeo por modo crudo
+  if (cleanRaw && RAW_MODE_NAMES[cleanRaw]) {
+    return RAW_MODE_NAMES[cleanRaw];
+  }
+
+  return rawGameMode || 'Partida';
+}
+
+export function buildInGamePresence(liveData, config, rankText = '', skinName = '', gameModeName = '') {
   const champ = getChampionInfo(liveData.championName);
   const patch = getPatchVersion();
 
@@ -54,28 +146,30 @@ export function buildInGamePresence(liveData, config, rankText = '', skinName = 
   }
 
   // 2. Construir Details (primera línea de texto superior)
-  // Formato: Campeón (Rol) • Elo y División actual
-  // Ej: "Miss Fortune • Master (120 LP)" o "Miss Fortune (Bot) • Master (120 LP)"
+  // Formato: Campeón • Elo División y LP (sin paréntesis)
+  // Ej: "Caitlyn • Master 120 LP" o "Morgana • Master 120 LP"
   let details = champ.name;
-  const pos = (liveData.positionName || '').trim();
-  if (pos && pos.toUpperCase() !== 'NONE') {
-    details += ` (${pos})`;
-  }
-  if (rankText) {
+  if (rankText && rankText !== 'Unranked') {
     details += ` • ${rankText}`;
-  } else {
-    details += ` • ${liveData.kills} / ${liveData.deaths} / ${liveData.assists}`;
   }
 
   // 3. Construir State (segunda línea de texto)
-  // Formato: Modo de juego • CS actual (y estado si está muerto sin contador de segundos para evitar rate limit de Discord)
-  let stateText = liveData.gameModeName || 'En partida';
+  // Formato: KDA en tiempo real, CS por decenas y modo de juego
+  // Ej: "0/0/0 • 0 CS • Ranked SoloQ" o "0/0/0 • Arena"
+  const rawCs = Number(liveData.cs) || 0;
+  const displayCs = Math.floor(rawCs / 10) * 10;
+  let stateText = `${liveData.kills}/${liveData.deaths}/${liveData.assists}`;
   if (liveData.isDead) {
     stateText += ' (Muerto)';
   }
-  const cs = Number(liveData.cs) || 0;
-  if (config.showCs !== false) {
-    stateText += ` • ${cs} CS`;
+
+  const isArena = gameModeName === 'Arena';
+  if (!isArena && config.showCs !== false) {
+    stateText += ` • ${displayCs} CS`;
+  }
+
+  if (gameModeName) {
+    stateText += ` • ${gameModeName}`;
   }
 
   // 4. Determinar imagen principal (Large Image):
@@ -87,18 +181,17 @@ export function buildInGamePresence(liveData, config, rankText = '', skinName = 
   }
 
   // 5. Large Text (tooltip sobre la imagen)
-  // Muestra solo el nombre de la skin (ya que incluye el campeón) y SIN (0.0/min)
+  // Solo el nombre de la skin y el nivel actual del campeón (sin KDA ni CS)
   const displaySkinName = skinName || champ.name;
   let largeText = displaySkinName;
-  if (config.showLevel && liveData.level) {
+  if (liveData.level) {
     largeText += ` • Nivel ${liveData.level}`;
   }
-  largeText += ` • KDA: ${liveData.kdaRatio}`;
-  if (config.showCs !== false) {
-    largeText += ` • ${cs} CS`;
-  }
 
-  // 6. Botones interactivos en Discord (máximo 2)
+  // 6. Small Text (tooltip sobre el logo de League of Legends)
+  const smallText = gameModeName ? `Modo: ${gameModeName}` : 'League of Legends';
+
+  // 7. Botones interactivos en Discord (máximo 2)
   const buttons = [];
   if (config.showButtons) {
     buttons.push({
@@ -117,13 +210,13 @@ export function buildInGamePresence(liveData, config, rankText = '', skinName = 
       large_image: largeImage,
       large_text: largeText,
       small_image: LEAGUE_LOGO_URL,
-      small_text: 'League of Legends'
+      small_text: smallText
     },
     buttons: buttons.length > 0 ? buttons : undefined
   };
 }
 
-export function buildLcuPresence(phase, summoner, config, rankText = '') {
+export function buildLcuPresence(phase, summoner, config, rankText = '', gameModeName = '') {
   const summonerName = summoner?.gameName ? `${summoner.gameName}#${summoner.tagLine}` : (summoner?.displayName || 'Invocador');
   const iconId = summoner?.profileIconId || 29;
   const profileIconUrl = `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/${iconId}.jpg`;
@@ -137,19 +230,19 @@ export function buildLcuPresence(phase, summoner, config, rankText = '') {
 
   switch (phase) {
     case 'Lobby':
-      stateText = 'En Sala (Lobby)';
+      stateText = gameModeName ? `En Sala • ${gameModeName}` : 'En Sala (Lobby)';
       break;
     case 'Matchmaking':
-      stateText = 'Buscando Partida...';
+      stateText = gameModeName ? `Buscando Partida • ${gameModeName}` : 'Buscando Partida...';
       break;
     case 'ReadyCheck':
-      stateText = '¡Partida Encontrada!';
+      stateText = gameModeName ? `¡Partida Encontrada! • ${gameModeName}` : '¡Partida Encontrada!';
       break;
     case 'ChampSelect':
-      stateText = 'En Selección de Campeón';
+      stateText = gameModeName ? `Selección de Campeón • ${gameModeName}` : 'En Selección de Campeón';
       break;
     case 'GameStart':
-      stateText = 'Iniciando Partida...';
+      stateText = gameModeName ? `Iniciando Partida • ${gameModeName}` : 'Iniciando Partida...';
       break;
     case 'EndOfGame':
     case 'WaitingForStats':
@@ -159,6 +252,8 @@ export function buildLcuPresence(phase, summoner, config, rankText = '') {
     default:
       stateText = 'En el Cliente';
   }
+
+  const smallText = gameModeName ? `Modo: ${gameModeName}` : 'League of Legends';
 
   return {
     details,
@@ -170,7 +265,7 @@ export function buildLcuPresence(phase, summoner, config, rankText = '') {
       large_image: profileIconUrl,
       large_text: `${summonerName} (Nivel ${summoner?.summonerLevel || 1})`,
       small_image: LEAGUE_LOGO_URL,
-      small_text: 'League of Legends'
+      small_text: smallText
     }
   };
 }

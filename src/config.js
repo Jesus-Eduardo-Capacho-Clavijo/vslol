@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
+const CONFIG_FILE = path.join(process.cwd(), 'config.json');
 
 const DEFAULT_CONFIG = {
   discordClientId: '1194034071588851783', // ID oficial registrado como "League of Legends"

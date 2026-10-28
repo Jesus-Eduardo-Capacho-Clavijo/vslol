@@ -1,21 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const CHAMPIONS_JSON_FILE = path.join(__dirname, 'champions.json');
-
-// Cargar catálogo de campeones 100% offline (sin peticiones de red externas)
-let championsData = {};
-
-try {
-  if (fs.existsSync(CHAMPIONS_JSON_FILE)) {
-    championsData = JSON.parse(fs.readFileSync(CHAMPIONS_JSON_FILE, 'utf-8'));
-  }
-} catch (err) {
-  console.warn('[Champions] Error al cargar champions.json:', err.message);
-}
+import championsData from './champions.json' with { type: 'json' };
 
 // Alias para nombres comunes, compuestos o traducciones al español
 const CHAMPION_ALIASES = {

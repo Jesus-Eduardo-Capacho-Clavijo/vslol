@@ -50,7 +50,7 @@ export class RiotLiveApi {
         this.endpoint,
         {
           agent: loopbackRiotAgent,
-          timeout: 1500,
+          timeout: 1000,
         },
         (res) => {
           if (res.statusCode !== 200) {
@@ -67,13 +67,22 @@ export class RiotLiveApi {
               const parsed = this.parseAllGameData(data);
               resolve(parsed);
             } catch (err) {
-              resolve({ inGame: false, error: err.message });
+              if (err instanceof SyntaxError) {
+                resolve({ inGame: false, error: 'JSON malformado recibido de Live API' });
+              } else {
+                console.error('[RiotLiveApi] Error al parsear datos de partida:', err);
+                resolve({ inGame: false, error: err.message });
+              }
             }
           });
         }
       );
 
-      req.on('error', () => {
+      req.on('error', (err) => {
+        // En ausencia de partida activa, los sockets rechazan la conexión de forma esperada
+        if (err.code !== 'ECONNREFUSED' && err.code !== 'ECONNRESET' && err.code !== 'ETIMEDOUT') {
+          console.debug?.('[RiotLiveApi] Socket info:', err.code || err.message);
+        }
         resolve({ inGame: false });
       });
 
