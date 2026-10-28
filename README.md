@@ -8,8 +8,9 @@ Integración de Discord Rich Presence para League of Legends en Windows. Muestra
 
 ## Instalación y uso
 
-1. Descarga [VSlol.zip](https://github.com/Jesus-Eduardo-Capacho-Clavijo/vslol/raw/main/VSlol.zip) y extrae su contenido.
+1. Descarga [VSlol.zip](https://github.com/Jesus-Eduardo-Capacho-Clavijo/vslol/raw/main/VSlol.zip) y extrae `VSlol.exe`.
 2. Ejecuta `VSlol.exe`.
+   - Si Windows muestra el aviso de SmartScreen ("Windows protegió su PC"), haz clic en **Más información** y luego en **Ejecutar de todas formas**.
 3. Aparecerá un aviso de confirmación. El programa se iniciará en segundo plano y se añadirá al inicio de Windows para arrancar automáticamente al encender el equipo.
 
 No requiere instalar Node.js ni librerías adicionales.
@@ -17,10 +18,10 @@ No requiere instalar Node.js ni librerías adicionales.
 ### Desinstalación
 
 Para detener y quitar el programa del sistema:
-- Ejecuta `Desinstalar.bat` (incluido en el archivo zip), o
-- Abre una terminal y corre `VSlol.exe --uninstall`.
+- Abre una terminal y ejecuta `VSlol.exe --uninstall`, o
+- Ve a `%LOCALAPPDATA%\VSlol` y ejecuta `Desinstalar VSlol.bat` (creado automáticamente en la instalación).
 
-Esto cierra el proceso activo, elimina la clave del registro de inicio de Windows y borra los archivos instalados en `%LOCALAPPDATA%\VSlol`.
+Esto cierra el proceso activo, elimina la clave del registro de inicio de Windows y borra los archivos instalados.
 
 ---
 
