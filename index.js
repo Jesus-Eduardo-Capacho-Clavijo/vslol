@@ -15,13 +15,13 @@ let lastPhase = '';
 let clientLogged = false;
 let gameLogged = false;
 let cachedRankText = '';
-let lastRankFetchTime = 0;
 let lastSentTime = 0;
+let lastSummonerPuuid = '';
 const DISCORD_THROTTLE_MS = 15000; // 15s para respetar el límite oficial de Discord RPC
 
-async function getOrUpdateRank() {
+async function getOrUpdateRank(force = false) {
   const now = Date.now();
-  if (!cachedRankText || (now - lastRankFetchTime > 60000)) {
+  if (force || !cachedRankText || (now - lastRankFetchTime > 60000)) {
     try {
       const rankedData = await riotLcu.getRankedStats();
       if (rankedData) {
@@ -97,10 +97,17 @@ async function updatePresence() {
     if (phase !== null) {
       const summoner = await riotLcu.getCurrentSummoner();
 
-      if (!clientLogged && summoner) {
-        const rankText = await getOrUpdateRank();
+      // Detectar cambio de cuenta o primer inicio del cliente
+      const isNewAccount = summoner?.puuid && summoner.puuid !== lastSummonerPuuid;
+      if (isNewAccount) {
+        lastSummonerPuuid = summoner.puuid;
+        cachedRankText = ''; // Limpiar caché de rango de la cuenta anterior
+        lastRankFetchTime = 0;
+        lastPresenceJson = ''; // Forzar actualización inmediata en Discord
+
+        const rankText = await getOrUpdateRank(true);
         const rankDisplay = rankText ? ` (${rankText})` : '';
-        console.log(`[LoL Cliente] Invocador: ${summoner.gameName}#${summoner.tagLine} (Nivel ${summoner.summonerLevel})${rankDisplay}`);
+        console.log(`[LoL Cliente] Invocador detectado: ${summoner.gameName}#${summoner.tagLine} (Nivel ${summoner.summonerLevel})${rankDisplay}`);
         clientLogged = true;
       }
 
@@ -109,13 +116,13 @@ async function updatePresence() {
       const json = JSON.stringify(presence);
 
       const isPhaseChange = phase !== lastPhase;
-      const shouldSend = json !== lastPresenceJson && (wasInGame || isPhaseChange || (now - lastSentTime >= DISCORD_THROTTLE_MS));
+      const shouldSend = json !== lastPresenceJson && (wasInGame || isPhaseChange || isNewAccount || (now - lastSentTime >= DISCORD_THROTTLE_MS));
 
       if (shouldSend) {
         discordIpc.setActivity(presence);
         lastPresenceJson = json;
         lastSentTime = now;
-        if (isPhaseChange || wasInGame) {
+        if (isPhaseChange || wasInGame || isNewAccount) {
           console.log(`[Discord Update] ${presence.details} | ${presence.state}`);
           lastPhase = phase;
         }
@@ -130,6 +137,8 @@ async function updatePresence() {
       lastPresenceJson = '';
       lastPhase = '';
       clientLogged = false;
+      lastSummonerPuuid = '';
+      cachedRankText = '';
       lastSentTime = 0;
     }
   } catch (err) {

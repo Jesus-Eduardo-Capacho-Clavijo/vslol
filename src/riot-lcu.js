@@ -34,9 +34,16 @@ export class RiotLcu {
         const parts = content.split(':');
         // Formato: ProcessName:PID:Port:Password:Protocol
         if (parts.length >= 5) {
-          this.port = parts[2];
-          this.token = parts[3];
-          this.protocol = parts[4] || 'https';
+          const newPort = parts[2];
+          const newToken = parts[3];
+          const newProtocol = parts[4] || 'https';
+          if (newPort !== this.port || newToken !== this.token) {
+            this.port = newPort;
+            this.token = newToken;
+            this.protocol = newProtocol;
+            this.summoner = null;
+            if (this.skinCache) this.skinCache.clear();
+          }
           this.isConnected = true;
           return true;
         }
@@ -45,12 +52,14 @@ export class RiotLcu {
       // Ignorar si el juego no está abierto o el archivo está bloqueado
     }
 
+    this.port = null;
+    this.token = null;
     this.isConnected = false;
     return false;
   }
 
   async request(endpoint) {
-    if (!this.port || !this.token) {
+    if (!this.isConnected || !this.port || !this.token) {
       const detected = this.detectCredentials();
       if (!detected) return null;
     }
@@ -72,6 +81,12 @@ export class RiotLcu {
         (res) => {
           if (res.statusCode !== 200) {
             res.resume();
+            // Si el token expiró por cambio de cuenta (401/403), invalidar para releer lockfile
+            if (res.statusCode === 401 || res.statusCode === 403) {
+              this.port = null;
+              this.token = null;
+              this.isConnected = false;
+            }
             return resolve(null);
           }
 
@@ -88,6 +103,9 @@ export class RiotLcu {
       );
 
       req.on('error', () => {
+        // Si el socket falla (ej. cliente reiniciado en otro puerto), invalidar credenciales
+        this.port = null;
+        this.token = null;
         this.isConnected = false;
         resolve(null);
       });
