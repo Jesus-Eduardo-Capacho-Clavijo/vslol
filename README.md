@@ -1,101 +1,88 @@
-# ⚡ VSlol • League of Legends Discord Rich Presence
+# VSlol
 
-<p align="center">
-  <a href="https://github.com/Jesus-Eduardo-Capacho-Clavijo/vslol/raw/main/VSlol.zip">
-    <img src="https://img.shields.io/badge/DESCARGAR_VSlol_(.ZIP)-00E59B?style=for-the-badge&logo=windows&logoColor=black" alt="Descargar VSlol" height="45">
-  </a>
-</p>
+Integración de Discord Rich Presence para League of Legends en Windows. Muestra en tu perfil de Discord el campeón que juegas, rango, KDA en tiempo real, súbditos y modo de juego.
 
-<p align="center">
-  <b>Aplicación de escritorio 100% autónoma, silenciosa y en tiempo real para League of Legends en Discord.</b><br>
-  <i>No requiere instalar Node.js ni configurar terminales. Solo descarga, descomprime y dale doble clic.</i>
-</p>
+[Descargar VSlol (VSlol.zip)](https://github.com/Jesus-Eduardo-Capacho-Clavijo/vslol/raw/main/VSlol.zip)
 
 ---
 
-## 📥 Instalación Rápida (1 solo clic)
+## Instalación y uso
 
-1. **[Haz clic aquí para Descargar VSlol.zip](https://github.com/Jesus-Eduardo-Capacho-Clavijo/vslol/raw/main/VSlol.zip)**
-2. Descomprime el archivo `.zip` en tu PC.
-3. Haz **doble clic en `VSlol.exe`**.
-4. ¡Listo! Aparecerá una ventana nativa confirmando que el programa quedó instalado y activo:
-   - **Inicia automáticamente con Windows** en segundo plano (100% invisible, sin consolas ni ventanas negras).
-   - Cuando no juegues, permanece en reposo consumiendo **0.0% de CPU**.
-   - Apenas abras el cliente o juegues una partida, tu estado en Discord se actualizará de inmediato.
+1. Descarga [VSlol.zip](https://github.com/Jesus-Eduardo-Capacho-Clavijo/vslol/raw/main/VSlol.zip) y extrae su contenido.
+2. Ejecuta `VSlol.exe`.
+3. Aparecerá un aviso de confirmación. El programa se iniciará en segundo plano y se añadirá al inicio de Windows para arrancar automáticamente al encender el equipo.
 
-> 🗑️ **¿Cómo desinstalarlo?**  
-> El archivo `Desinstalar.bat` viene incluido en el `.zip`. Solo dale **doble clic** y se encargará automáticamente de cerrar el proceso, quitarlo del inicio de Windows y limpiar los archivos.
+No requiere instalar Node.js ni librerías adicionales.
 
----
+### Desinstalación
 
-## 🎮 ¿Cómo se ve en tu perfil de Discord?
+Para detener y quitar el programa del sistema:
+- Ejecuta `Desinstalar.bat` (incluido en el archivo zip), o
+- Abre una terminal y corre `VSlol.exe --uninstall`.
 
-```text
-JUGANDO A UN JUEGO
-League of Legends                   <-- Título oficial de la app en Discord
-Morgana • Master 120 LP             <-- Campeón actual y tu Elo con LP (sin paréntesis)
-0/0/0 • 0 CS • Ranked SoloQ         <-- KDA en vivo, CS por decenas y Modo de juego
-12:35 transcurridos                 <-- Cronómetro oficial de la partida
-```
-
-### ✨ Detalles Visuales:
-- **KDA en tiempo real:** Prioridad absoluta a tus kills, muertes y asistencias instantáneas. Si mueres, indica `(Muerto)`.
-- **Farm (CS) optimizado:** Se actualiza por decenas (`0 CS`, `10 CS`, `20 CS`...) respetando los límites oficiales de Discord.
-- **Tooltip de Skin:** Al pasar el cursor sobre la imagen del campeón, solo muestra `Nombre de la Skin • Nivel X`.
-- **Tooltip del Logo LoL:** Al pasar el cursor sobre el pequeño logo oficial de LoL, muestra `Modo: Ranked SoloQ`.
-- **En el Cliente (Lobby y Champ Select):**
-  - En Sala: `En Sala • Ranked SoloQ` (o el modo elegido)
-  - Buscando partida: `Buscando Partida • ARAM`
-  - Selección de campeón: `Selección de Campeón • Normal Reclutamiento`
+Esto cierra el proceso activo, elimina la clave del registro de inicio de Windows y borra los archivos instalados en `%LOCALAPPDATA%\VSlol`.
 
 ---
 
-## 🕹️ Modos de Juego Soportados
+## Qué muestra en Discord
 
-Identificación precisa mediante la lectura de colas oficiales (`Queue IDs`) de Riot:
+### Durante una partida
+- **Detalles:** Campeón y división/LP actual (ej. `Caitlyn • Master 120 LP`).
+- **Estado:** KDA actualizado en vivo, súbditos redondeados a decenas y modo de juego (ej. `2/0/1 • 30 CS • Ranked SoloQ`). Si caes en combate, añade `(Muerto)`.
+- **Imagen principal:** Splash art oficial de la skin activa. Al posar el cursor muestra el nombre de la skin y el nivel del campeón.
+- **Icono pequeño:** Logo de League of Legends. Al posar el cursor muestra el modo de juego.
+- **Tiempo:** Cronómetro oficial de la partida transcurrida.
 
-| Modo de Juego | Estado en Discord |
-| :--- | :--- |
-| **Clasificatoria Solo/Duo** | `Ranked SoloQ` |
-| **Clasificatoria Flexible** | `Ranked Flex 5v5` |
-| **Normal Reclutamiento** | `Normal Reclutamiento` |
-| **Normal Oculta** | `Normal Oculta` |
-| **Partida Rápida (Quickplay)** | `Partida Rápida` |
-| **ARAM (Abismo de los Lamentos)** | `ARAM` |
-| **ARAM Caos (Mayhem)** | `ARAM Caos` |
-| **Arena (2v2v2v2 / Cherry)** | `Arena` *(CS oculto automáticamente)* |
-| **Herramienta de Práctica** | `Herramienta de Práctica` |
-| **Partida Personalizada** | `Personalizada` |
-| **Modos Rotativos** | `URF`, `ARURF`, `Uno para Todos`, `Libro de Hechizos`, `Nexus Blitz`, `Enjambre`, `Co-op vs IA` |
+### En el cliente (fuera de partida)
+- Nombre de invocador con etiqueta y rango.
+- Estado actual: en sala, buscando partida, en selección de campeón o simplemente en el cliente.
 
 ---
 
-## 🔒 Privacidad y Rendimiento
+## Modos de juego reconocidos
 
-Diseñado bajo los más altos estándares de calidad de software:
+El programa identifica la cola mediante las APIs locales del cliente:
 
-1. **Cero permisos de administrador (UAC):** Corre exclusivamente en espacio de usuario estándar.
-2. **Cero escaneo de procesos:** No revisa tu lista de programas abiertos, navegadores ni chats. Solo consulta los puertos locales oficiales del juego (`127.0.0.1`).
-3. **Cero telemetría:** No envía métricas, no rastrea tu información ni hace llamadas a servidores de terceros.
-4. **Instancia Única:** Protegido por un Named Pipe local para evitar que se ejecute dos veces en memoria.
+- Ranked Solo/Duo (`Ranked SoloQ`)
+- Ranked Flex (`Ranked Flex 5v5`)
+- Normal Reclutamiento y Normal Oculta
+- Partida Rápida
+- ARAM y ARAM Caos
+- Arena (modo 2v2v2v2; oculta el contador de CS)
+- Herramienta de Práctica
+- Partidas personalizadas
+- Modos rotativos: URF, ARURF, Uno para Todos, Libro de Hechizos, Nexus Blitz, Enjambre y Co-op vs IA
 
 ---
 
-## 💻 Para Desarrolladores (Código Fuente)
+## Privacidad y arquitectura
 
-Si deseas clonar y revisar el código fuente o compilar tu propio `.exe`:
+- **Sin permisos elevados:** Funciona como usuario estándar de Windows, sin pedir privilegios de administrador.
+- **Sin rastreo de procesos ajenos:** No analiza la lista de programas abiertos (`tasklist` o `GetProcesses`). Solo consulta los endpoints locales que expone el juego en `127.0.0.1` (puertos 2999 y LCU).
+- **Sin conexiones a terceros:** No contiene analíticas ni envía datos a servidores externos. La comunicación ocurre únicamente entre tu PC, el cliente de Riot y tu aplicación local de Discord.
+- **Instancia única:** Utiliza un named pipe local (`vslol-single-instance`) para evitar procesos duplicados en memoria.
+- **Ejecución silenciosa:** Compilado bajo el subsistema GUI de Windows para ejecutarse en segundo plano sin desplegar ventanas de consola.
+
+---
+
+## Desarrollo y compilación
+
+Requisitos: Node.js 20 o superior en Windows.
 
 ```bash
-# 1. Clonar el repositorio
 git clone https://github.com/Jesus-Eduardo-Capacho-Clavijo/vslol.git
 cd vslol
-
-# 2. Instalar dependencias
 npm install
+```
 
-# 3. Ejecutar en desarrollo
+Para probarlo localmente:
+```bash
 node index.js
+```
 
-# 4. Compilar el ejecutable autónomo VSlol.exe
+Para generar el ejecutable autónomo (`VSlol.exe`):
+```bash
 npm run build
 ```
+
+El script empaqueta el código fuente con esbuild en un único bundle CommonJS, genera el blob SEA (Single Executable Application) oficial de Node.js, lo inyecta con postject y conmuta el encabezado PE a subsistema GUI (Subsystem = 2).
