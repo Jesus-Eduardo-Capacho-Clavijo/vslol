@@ -1,0 +1,18 @@
+{
+  "name": "lol-discord-presence",
+  "version": "1.0.0",
+  "description": "Discord Rich Presence en tiempo real para League of Legends con API oficial de Riot",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "league-of-legends",
+    "discord-rpc",
+    "rich-presence",
+    "riot-api"
+  ],
+  "author": "",
+  "license": "MIT"
+}

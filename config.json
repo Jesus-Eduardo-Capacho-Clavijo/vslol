@@ -1,0 +1,10 @@
+{
+  "discordClientId": "1194034071588851783",
+  "imageStyle": "ddragon-splash",
+  "showCs": true,
+  "showLevel": true,
+  "showButtons": true,
+  "pollingIntervalMs": 2000,
+  "webPort": 3456,
+  "simulationMode": false
+}
